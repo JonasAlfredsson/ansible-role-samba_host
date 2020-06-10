@@ -1,0 +1,201 @@
+################################################################################
+#>> This file is managed by Ansible - changes made here will be overwritten. <<#
+################################################################################
+#
+# NOTE: Whenever you modify this file you should run the command "testparm" to
+# check that you have not made any basic syntactic errors.
+
+#=============================== Global Settings ===============================
+
+[global]
+
+#### Browsing/Identification ####
+
+    netbios name = {{ samba_netbios_name | default(ansible_hostname) }}
+    workgroup = {{ samba_workgroup | default("WORKGROUP") }}
+    server string = {{ samba_server_string | default("Samba %v") }}
+{% if samba_realm is defined %}
+    realm = {{ samba_realm }}
+{% endif %}
+    wins support = {{ samba_wins_support | default(false) | ternary('yes', 'no') }}
+{% if samba_wins_server is defined and samba_wins_server|length > 0 %}
+    wins server = {{ samba_wins_server|join(' ') }}
+{% endif %}
+
+
+
+#### Networking ####
+
+{% if samba_interfaces is defined and samba_interfaces|length > 0 %}
+    interfaces = {{ samba_interfaces|join(' ') }}
+    bind interfaces only = yes
+{% endif %}
+
+
+
+#### Logging/Debugging ####
+
+{% if samba_logging is defined and samba_logging|length > 0 %}
+    logging = {{ samba_logging|join(' ') }}
+{% for logger in samba_logging %}
+{% if 'file' in logger %}
+    log file = {{ samba_log_file | default("/var/log/samba/log.%m") }}
+    max log size = {{ samba_max_log_size | default("1000") }}
+{% endif %}
+{% endfor %}
+{% else %}
+    logging = syslog
+{% endif %}
+{% if samba_log_level is defined and samba_log_level|length > 0 %}
+    log level = {{ samba_log_level|join(' ') }}
+{% endif %}
+    panic action = /usr/share/samba/panic-action %d
+
+
+
+#### Authentication/Security ####
+
+    server role = standalone server
+    security = {{ samba_security | default("user") }}
+
+    passdb backend = {{ samba_passdb_backend | default("tdbsam") }}
+    encrypt passwords = {{ samba_encrypt_passwords | default(true) | ternary('yes', 'no') }}
+    obey pam restrictions = {{ samba_obey_pam_restrictions | default(false) | ternary('yes', 'no') }}
+    pam password change = {{ samba_pam_password_change | default(false) | ternary('yes', 'no') }}
+    unix password sync = {{ samba_unix_password_sync | default(false) | ternary('yes', 'no') }}
+    passwd program = /usr/bin/passwd %u
+    passwd chat = *Enter\snew\s*\spassword:* %n\n *Retype\snew\s*\spassword:* %n\n *password\supdated\ssuccessfully* .
+
+    server min protocol = {{ samba_server_min_protocol | default("SMB2_10") }}
+{% if samba_server_max_protocol is defined %}
+    server max protocol = {{ samba_server_max_protocol }}
+{% endif %}
+    client min protocol = {{ samba_client_min_protocol | default("SMB2_10") }}
+{% if samba_client_max_protocol is defined %}
+    client max protocol = {{ samba_client_max_protocol }}
+{% endif %}
+
+
+
+#### User/Guest Share Permissions ####
+
+{% if samba_username_map is defined %}
+    username map = {{ samba_username_map_file }}
+
+{% endif %}
+    map to guest = {{ samba_map_to_guest | default("Never") }}
+    guest account = {{ samba_guest_account | default("nobody") }}
+
+    usershare allow guests = {{ samba_usershare_allow_guests | default(false) | ternary('yes', 'no') }}
+    read only = {{ samba_read_only | default(true) | ternary('yes', 'no') }}
+
+
+
+#### Misc ####
+
+    unix extensions = {{ samba_unix_extensions | default(true) | ternary('yes', 'no') }}
+    wide links = {{ samba_wide_links | default(false) | ternary('yes', 'no') }}
+{% if samba_dfree_command is defined %}
+    dfree command = {{ samba_dfree_folder }}/dfree_global
+{% endif %}
+{% if samba_veto_files is defined and samba_veto_files|length > 0 %}
+    veto files = /{{ samba_veto_files|join('/') }}/
+    delete veto files = yes
+{% endif %}
+
+
+
+#============================== Share Definitions ==============================
+
+{% if samba_load_homes is defined and samba_load_homes|bool == true %}
+[homes]
+    comment = Home Directories
+    browseable = no
+    writable = yes
+    create mask = 0700
+    directory mask = 0700
+    valid users = %S
+{% endif -%}
+
+
+{% if samba_load_printers is defined and samba_load_printers|bool == true %}
+[printers]
+    comment = All Printers
+    browseable = no
+    path = /var/spool/samba
+    printable = yes
+    guest ok = no
+    read only = yes
+    create mask = 0700
+
+[print$]
+    comment = Printer Drivers
+    path = /var/lib/samba/printers
+    browseable = yes
+    read only = yes
+    guest ok = no
+{% endif -%}
+
+
+{% if samba_shares is defined and samba_shares|length > 0 %}
+{% for share in samba_shares %}
+
+[{{ share.name }}]
+{% if share.comment is defined %}
+    comment = {{ share.comment }}
+{% endif %}
+    path = {{ share.path }}
+    browseable = {{ share.browseable | default(true) | ternary('yes', 'no') }}
+{% if share.read_only is defined %}
+    writable = {{ share.read_only | ternary('no', 'yes')}}
+{% else %}
+    writable = {{ share.writable | default(false) | ternary('yes', 'no')}}
+{% endif %}
+{% if share.valid_users is defined and share.valid_users|length > 0 %}
+    valid users = {{ share.valid_users|join(', ') }}
+{% endif %}
+{% if share.public is defined %}
+    guest ok = {{ share.public | ternary('yes', 'no') }}
+{% else %}
+    guest ok = {{ share.guest_ok | default(false) | ternary('yes', 'no') }}
+{% endif %}
+{% if share.write_list is defined and share.write_list|length > 0 %}
+    write list = {{ share.write_list|join(', ') }}
+{% endif %}
+{% if share.force_group is defined %}
+    force group = {{ share.force_group }}
+{% endif %}
+{% if share.create_mode is defined %}
+    create mode = {{ share.create_mode | default('0744') }}
+{% endif %}
+{% if share.force_create_mode is defined %}
+    force create mode = {{ share.force_create_mode | default('0000') }}
+{% endif %}
+{% if share.directory_mode is defined %}
+    directory mode = {{ share.directory_mode | default('0755') }}
+{% endif %}
+{% if share.force_directory_mode is defined %}
+    force directory mode = {{ share.force_directory_mode | default('0000') }}
+{% endif %}
+{% if share.follow_symlinks is defined %}
+    follow symlinks = {{ share.follow_symlinks | default(true) | ternary('yes', 'no') }}
+{% endif %}
+{% if share.wide_links is defined %}
+    wide links = {{ share.wide_links | default(false) | ternary('yes', 'no') }}
+{% endif %}
+{% if share.dfree_command is defined %}
+    dfree command = {{ samba_dfree_folder }}/{{ share.name }}
+{% endif %}
+{% if share.vfs_objects is defined and share.vfs_objects|length > 0 %}
+    vfs objects = {% for obj in share.vfs_objects %}{{ obj.name }} {% endfor %}
+
+{% for obj in share.vfs_objects %}
+{% if obj.options is defined and obj.options|length > 0 %}
+{% for opt in obj.options %}
+    {{ obj.name }}:{{ opt.name }} = {{ opt.value }}
+{% endfor %}
+{% endif %}
+{% endfor %}
+{% endif %}
+{% endfor %}
+{% endif %}

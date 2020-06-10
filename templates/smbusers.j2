@@ -1,0 +1,6 @@
+################################################################################
+#>> This file is managed by Ansible - changes made here will be overwritten. <<#
+################################################################################
+{% for entry in samba_username_map %}
+{{ entry.to }} = {{ entry.from|join(' ') }}
+{% endfor %}

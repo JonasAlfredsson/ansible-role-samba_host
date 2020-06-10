@@ -1,0 +1,69 @@
+---
+- name: Install Samba packages
+  become: true
+  environment:
+    DEBIAN_FRONTEND: noninteractive
+  apt:
+    name: "{{ packages }}"
+    state: present
+  vars:
+    packages:
+      - samba-common
+      - samba
+      - samba-client
+      - samba-vfs-modules
+
+- name: Increase the allowed maximum number of open files (a Windows limitation)
+  become: true
+  lineinfile:
+    path: /etc/security/limits.conf
+    state: present
+    regexp: '^\* - nofile [0-9]+'
+    insertbefore: '^# End of file'
+    line: '* - nofile 16384'
+  notify:
+    - Restart Samba services
+
+- fail:
+    msg: "Samba can be either a WINS Server, or a WINS Client, but NOT both"
+  when: (samba_wins_support is defined and samba_wins_support != false) and samba_wins_server is defined
+
+- name: Push out Samba configuration file
+  become: true
+  template:
+    dest: "{{ samba_config_file }}"
+    src: smb.conf.j2
+    validate: 'testparm -s %s'
+  register: samba_testparm
+  notify:
+    - Restart Samba services
+
+- name: Create 'username map' file if needed
+  become: true
+  template:
+    dest: "{{ samba_username_map_file }}"
+    src: smbusers.j2
+    mode: '0744'
+  notify:
+    - Restart Samba services
+  when: samba_username_map is defined
+
+- name: Configure any 'dfree command'
+  include: dfree_command.yml
+
+- name: Make sure Samba loads any changes made to its configuration before continuing
+  meta: flush_handlers
+
+- name: Create Samba users if they don't exist yet
+  become: true
+  no_log: "{{ global_hide_sensitive_output | default(true) }}"
+  shell: >
+    set -o nounset -o pipefail -o errexit &&
+    (pdbedit --user={{ item.name }} 2>&1 > /dev/null) \
+    || (echo {{ item.password }}; echo {{ item.password }}) \
+    | smbpasswd -s -a {{ item.name }}
+  args:
+    executable: /bin/bash
+  with_items: "{{ samba_users }}"
+  register: create_user_output
+  changed_when: "'Added user' in create_user_output.stdout"

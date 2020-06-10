@@ -1,0 +1,30 @@
+---
+- name: Create the 'dfree command' folder
+  become: true
+  file:
+    state: directory
+    owner: root
+    group: root
+    mode: '0755'
+    path: "{{ samba_dfree_folder }}"
+
+- name: Configure global 'dfree command'
+  become: true
+  copy:
+    content: "{{ samba_dfree_command }}"
+    dest: "{{ samba_dfree_folder }}/dfree_global"
+    owner: "root"
+    group: "root"
+    mode: "0755"
+  when: samba_dfree_command is defined
+
+- name: Configure 'dfree command' for shares
+  become: true
+  copy:
+    content: "{{ item.dfree_command }}"
+    dest: "{{ samba_dfree_folder }}/{{ item.name }}"
+    owner: "root"
+    group: "root"
+    mode: "0755"
+  with_items: "{{ samba_shares }}"
+  when: item.dfree_command is defined

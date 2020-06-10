@@ -1,0 +1,3 @@
+samba_config_file: "/etc/samba/smb.conf"
+samba_username_map_file: "/etc/samba/smbusers"
+samba_dfree_folder: "/etc/samba/dfree"
