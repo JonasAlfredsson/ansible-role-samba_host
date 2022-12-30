@@ -102,6 +102,13 @@ The structure here will follow the order of the settings as they appear in the
 name" and the "Ansible name" of these settings, it should be easy to find the
 direct mapping inside that file.
 
+I have added the values the settings will default to if nothing is defined, as
+well as comments in case this leads to anything special. However, to be noted
+is that there are additional settings inside the `smb.conf` file that is not
+changeable via variables, and that mostly depends on that we either do not
+support changing them or it would be very unwise to modify it to something
+else.
+
 ### Global Settings
 ```yaml
 # Browsing/Identification
@@ -128,10 +135,12 @@ samba_encrypt_passwords: true
 samba_obey_pam_restrictions: false
 samba_pam_password_change: false
 samba_unix_password_sync: false
-samba_server_min_protocol: "SMB2_10"
+samba_server_min_protocol: "SMB3_11"
 samba_server_max_protocol:
-samba_client_min_protocol: "SMB2_10"
+samba_client_min_protocol: "SMB3_11"
 samba_client_max_protocol:
+samba_host_allow: [ "192.168.0.0/16", "172.16.0.0/12", "10.0.0.0/8" ]
+samba_host_deny: [ "0.0.0.0/0" ]
 
 # User/Guest Share Permissions
 samba_map_to_guest: "Never"
@@ -331,12 +340,11 @@ samba_shares:
 
 ## Protocol Version
 In the [global](#global-settings) settings I have made so that both the
-`server min protocol` and the `client min protocol` defaults to "SMB2_10",
-instead of the absolute lowest common denominator. This should probably be
-bumped up to "SMB3_11" if you are only serving Linux or Windows 10 computers.
-A list of all supported protocol versions can be found in the
-[`server max protocol`][27] section of the manual, and the options are exactly
-the same for the client setting as well.
+`server min protocol` and the `client min protocol` defaults to "SMB3_11", since
+this should only be lowered in case you are serving something else than Linux
+or Windows 10 computers. A list of all supported protocol versions can be found
+in the [`server max protocol`][27] section of the manual, and the options are
+exactly the same for the client setting as well.
 
 However, something that I experienced when using [cifs][28] to mount Samba
 shares on Linux was that it did not negotiate with the server in regards to
@@ -348,17 +356,17 @@ mount error(95): Operation not supported
 ```
 
 This is solved by explicitly specifying the protocol version when mounting
-("SMB2_10" in this example):
+("SMB3_11" in this example):
 
 ```
-sudo mount -t cifs -o vers=2.1 //192.168.0.1/share /home/user/share
+sudo mount -t cifs -o vers=3.11 //192.168.0.1/share /home/user/share
 ```
 
 Or like this in `/etc/fstab` (this mount will also authenticate as "guest" and
 wait for the network before it tries to connect):
 
 ```
-//192.168.0.1/share /home/user/share cifs vers=2.1,guest,_netdev,noexec 0 0
+//192.168.0.1/share /home/user/share cifs vers=3.11,guest,_netdev,noexec 0 0
 ```
 
 
