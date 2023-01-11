@@ -1,9 +1,8 @@
 ---
 - name: Install Samba packages
-  become: true
   environment:
     DEBIAN_FRONTEND: noninteractive
-  apt:
+  ansible.builtin.apt:
     name: "{{ packages }}"
     state: present
   vars:
@@ -14,8 +13,7 @@
       - samba-vfs-modules
 
 - name: Increase the allowed maximum number of open files (a Windows limitation)
-  become: true
-  lineinfile:
+  ansible.builtin.lineinfile:
     path: /etc/security/limits.conf
     state: present
     regexp: '^\* - nofile [0-9]+'
@@ -24,40 +22,43 @@
   notify:
     - Restart Samba services
 
-- fail:
+- name: Check that Samba isn't set up as both a WINS server and client
+  ansible.builtin.fail:
     msg: "Samba can be either a WINS Server, or a WINS Client, but NOT both"
   when: (samba_wins_support is defined and samba_wins_support != false) and samba_wins_server is defined
 
 - name: Push out Samba configuration file
-  become: true
-  template:
+  ansible.builtin.template:
     dest: "{{ samba_config_file }}"
     src: smb.conf.j2
     validate: 'testparm -s %s'
+    owner: root
+    group: root
+    mode: "0644"
   register: samba_testparm
   notify:
     - Restart Samba services
 
 - name: Create 'username map' file if needed
-  become: true
-  template:
+  ansible.builtin.template:
     dest: "{{ samba_username_map_file }}"
     src: smbusers.j2
-    mode: '0744'
+    owner: root
+    group: root
+    mode: "0644"
   notify:
     - Restart Samba services
   when: samba_username_map is defined
 
 - name: Configure any 'dfree command'
-  include: dfree_command.yml
+  ansible.builtin.include_tasks: dfree_command.yml
 
 - name: Make sure Samba loads any changes made to its configuration before continuing
-  meta: flush_handlers
+  ansible.builtin.meta: flush_handlers
 
 - name: Create Samba users if they don't exist yet
-  become: true
   no_log: "{{ global_hide_sensitive_output | default(true) }}"
-  shell: >
+  ansible.builtin.shell: >
     set -o nounset -o pipefail -o errexit &&
     (pdbedit --user={{ item.name }} 2>&1 > /dev/null) \
     || (echo {{ item.password }}; echo {{ item.password }}) \
