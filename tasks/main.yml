@@ -56,15 +56,19 @@
 - name: Make sure Samba loads any changes made to its configuration before continuing
   ansible.builtin.meta: flush_handlers
 
-- name: Create Samba users if they don't exist yet
+- name: Create Samba users if they don't exist, else make sure they have the correct password set
   no_log: "{{ global_hide_sensitive_output | default(true) }}"
   ansible.builtin.shell: >
     set -o nounset -o pipefail -o errexit &&
-    (pdbedit --user={{ item.name }} 2>&1 > /dev/null) \
-    || (echo {{ item.password }}; echo {{ item.password }}) \
-    | smbpasswd -s -a {{ item.name }}
+    if (pdbedit --user={{ item.name }} 2>&1 > /dev/null); then \
+      if ! (smbclient -U {{ item.name }}%{{ item.password }} -L 127.0.0.1 2>&1 > /dev/null); then \
+        (echo '{{ item.password }}'; echo '{{ item.password }}') | smbpasswd {{ item.name }}; \
+      fi; \
+    else \
+      (echo {{ item.password }}; echo {{ item.password }}) | smbpasswd -s -a {{ item.name }}; \
+    fi
   args:
     executable: /bin/bash
   with_items: "{{ samba_users }}"
   register: create_user_output
-  changed_when: "'Added user' in create_user_output.stdout"
+  changed_when: "'Added user' in create_user_output.stdout or 'New SMB password' in create_user_output.stdout"
