@@ -139,6 +139,7 @@ samba_server_min_protocol: "SMB3_11"
 samba_server_max_protocol:
 samba_client_min_protocol: "SMB3_11"
 samba_client_max_protocol:
+samba_force_encryption: true
 samba_host_allow: [ "127.0.0.1/8", "192.168.0.0/16", "172.16.0.0/12", "10.0.0.0/8" ]
 samba_host_deny: [ "0.0.0.0/0" ]
 
@@ -368,6 +369,21 @@ wait for the network before it tries to connect):
 ```
 //192.168.0.1/share /home/user/share cifs vers=3.11,guest,_netdev,noexec 0 0
 ```
+
+
+## Encrypted Connection
+By default the setting `samba_force_encryption: true` will require all clients
+to encrypt their connection to the server. Enabling of this is done by adding
+the [not well known][32] [`seal`][31] option along with a samba protocol greater
+than 3.0 in the mount command, like this:
+
+```
+sudo mount -t cifs -o vers=3.11,seal //192.168.0.1/share /home/user/share
+```
+
+In Samba [4.15][30] there is also a possibility to tune what type of encryption
+is used, but from what I can read it seems like `cifs-utils` only support
+AES-128-CCM at the moment.
 
 
 ## Logging
@@ -601,3 +617,6 @@ make sure the output follows the required format.
 [27]: https://www.samba.org/samba/docs/current/man-html/smb.conf.5.html#SERVERMAXPROTOCOL
 [28]: https://linux.die.net/man/8/mount.cifs
 [29]: https://www.samba.org/samba/docs/current/man-html/smb.conf.5.html#DFREECOMMAND
+[30]: https://www.fatyas.com/wiki/Samba
+[31]: https://lists.samba.org/archive/samba/2017-April/207530.html
+[32]: https://manpages.ubuntu.com/manpages/impish/man8/mount.cifs.8.html#seal

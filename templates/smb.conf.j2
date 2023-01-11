@@ -75,6 +75,9 @@
     client max protocol = {{ samba_client_max_protocol }}
 {% endif %}
 
+    smb encrypt = {{ samba_force_encryption | default(true) | ternary('required', 'desired') }}
+    server signing = required
+
     hosts allow = {{ samba_host_allow | default([ "127.0.0.1/8", "192.168.0.0/16", "172.16.0.0/12", "10.0.0.0/8" ]) | join(' ') }}
     hosts deny = {{ samba_host_deny | default([ "0.0.0.0/0" ]) | join(' ') }}
 
