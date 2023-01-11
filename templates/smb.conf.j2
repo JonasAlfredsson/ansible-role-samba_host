@@ -65,7 +65,6 @@
     unix password sync = {{ samba_unix_password_sync | default(false) | ternary('yes', 'no') }}
     passwd program = /usr/bin/passwd %u
     passwd chat = *Enter\snew\s*\spassword:* %n\n *Retype\snew\s*\spassword:* %n\n *password\supdated\ssuccessfully* .
-    null passwords = no
 
     server min protocol = {{ samba_server_min_protocol | default("SMB3_11") }}
 {% if samba_server_max_protocol is defined %}
