@@ -27,7 +27,7 @@
 #### Networking ####
 
 {% if samba_interfaces is defined and samba_interfaces|length > 0 %}
-    interfaces = {{ samba_interfaces|join(' ') }}
+    interfaces = lo {{ samba_interfaces|join(' ') }}
     bind interfaces only = yes
 {% endif %}
 
@@ -78,7 +78,7 @@
     smb encrypt = {{ samba_force_encryption | default(true) | ternary('required', 'desired') }}
     server signing = required
 
-    hosts allow = {{ samba_host_allow | default([ "127.0.0.1/8", "192.168.0.0/16", "172.16.0.0/12", "10.0.0.0/8" ]) | join(' ') }}
+    hosts allow = 127.0.0.1/8 {{ samba_host_allow | default([ "192.168.0.0/16", "172.16.0.0/12", "10.0.0.0/8" ]) | join(' ') }}
     hosts deny = {{ samba_host_deny | default([ "0.0.0.0/0" ]) | join(' ') }}
 
 
