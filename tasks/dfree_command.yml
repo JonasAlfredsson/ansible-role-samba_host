@@ -18,7 +18,7 @@
 
 - name: Configure 'dfree command' for shares
   ansible.builtin.copy:
-    content: "{{ item.dfree_command }}"
+    content: "{{ item.dfree_command }}\n"
     dest: "{{ samba_dfree_folder }}/{{ item.name }}"
     owner: root
     group: root
