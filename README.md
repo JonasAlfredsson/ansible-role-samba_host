@@ -120,7 +120,7 @@ samba_wins_support: false
 samba_wins_server: []  # Must be empty if wins_support == true.
 
 # Networking
-samba_interfaces: []  # Empty == use all interfaces.
+samba_interfaces: []  # Empty == use all interfaces (loopback is always allowed).
 
 # Logging/Debugging
 samba_logging: [ "syslog" ]
@@ -140,7 +140,7 @@ samba_server_max_protocol:
 samba_client_min_protocol: "SMB3_11"
 samba_client_max_protocol:
 samba_force_encryption: true
-samba_host_allow: [ "127.0.0.1/8", "192.168.0.0/16", "172.16.0.0/12", "10.0.0.0/8" ]
+samba_host_allow: [ "192.168.0.0/16", "172.16.0.0/12", "10.0.0.0/8" ] # 127.0.0.0/8 always allowed.
 samba_host_deny: [ "0.0.0.0/0" ]
 
 # User/Guest Share Permissions
