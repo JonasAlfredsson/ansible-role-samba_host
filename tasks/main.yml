@@ -27,10 +27,11 @@
     msg: "Samba can be either a WINS Server, or a WINS Client, but NOT both"
   when: (samba_wins_support is defined and samba_wins_support != false) and samba_wins_server is defined
 
-- name: Check there isn't conflicting settings if guest accounts are allowed
+- name: Warn about insecure guest access
   ansible.builtin.fail:
-    msg: "It is not possible to enforce encryption and allow guest accounts"
+    msg: "It is not possible to enable encryption on shares with guest access enabled; automatically defaulting to 'off' in those cases"
   when: samba_force_encryption and samba_usershare_allow_guests
+  ignore_errors: True
 
 - name: Push out Samba configuration file
   ansible.builtin.template:

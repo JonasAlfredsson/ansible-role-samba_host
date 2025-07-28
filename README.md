@@ -332,9 +332,9 @@ finally changing the `guest ok` [share](#shares) setting to "true" in order to
 actually allow a guest account to access a share.
 
 > :important: Enabling guest access requires [disabling of encryption][33] for
-> this share since Samba requires a password to be able to set up an encrypted
-> connection. Read more in the [Encrypted Connection](#encrypted-connection)
-> section for a workaround.
+> that particular share since Samba requires a password to be able to set up an
+> encrypted connection. Read more in the
+> [Encrypted Connection](#encrypted-connection) section for a workaround.
 
 All the necessary settings are collected in the example below:
 
@@ -342,7 +342,6 @@ All the necessary settings are collected in the example below:
 
 ```yaml
 samba_usershare_allow_guests: true
-samba_force_encryption: false
 
 samba_map_to_guest: "Bad User"
 samba_guest_account: "nobody"
@@ -403,7 +402,7 @@ AES-128-CCM at the moment.
 However, forcing connections to be encrypted conflicts with the `guest ok`
 option, since Samba apparently is [unable to create an encrypted connection][33]
 for an unauthenticated user (i.e. `guest`) as this account is missing a password
-which mean [no encryption keys can be created][34]. A more secure workaround
+which means [no encryption keys can be created][34]. A more secure workaround
 for this is to create the user "guest" with password "guest" and explaining that
 for anyone that want to connect "anonymously" instead of degrading the security
 for all users that want to connect to the same share:
