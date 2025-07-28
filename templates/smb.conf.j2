@@ -74,9 +74,15 @@
 {% if samba_client_max_protocol is defined %}
     client max protocol = {{ samba_client_max_protocol }}
 {% endif %}
+    client ipc min protocol = {{ samba_client_ipc_min_protocol | default("SMB3_11") }}
+{% if samba_client_max_protocol is defined %}
+    client ipc max protocol = {{ samba_client_ipc_max_protocol }}
+{% endif %}
 
-    smb encrypt = {{ samba_force_encryption | default(true) | ternary('required', 'desired') }}
-    server signing = required
+    # In order to handle guest accounts the actual values need to be defined on a share level.
+    smb encrypt = {{ samba_force_encryption | ternary('required', 'if_required') }}
+    server signing = {{ samba_usershare_allow_guests | ternary('auto', 'required') }}
+    client ipc signing = required
 
     hosts allow = 127.0.0.1/8 {{ samba_host_allow | default([ "192.168.0.0/16", "172.16.0.0/12", "10.0.0.0/8" ]) | join(' ') }}
     hosts deny = {{ samba_host_deny | default([ "0.0.0.0/0" ]) | join(' ') }}
@@ -91,9 +97,10 @@
     map to guest = {{ samba_map_to_guest | default("Never") }}
     guest account = {{ samba_guest_account | default("nobody") }}
 
-    usershare allow guests = {{ samba_usershare_allow_guests | default(false) | ternary('yes', 'no') }}
+    usershare allow guests = {{ samba_usershare_allow_guests | ternary('yes', 'no') }}
     read only = {{ samba_read_only | default(true) | ternary('yes', 'no') }}
-
+    create mask = {{ samba_create_mask | default('0644') }}
+    force create mode = {{ samba_force_create_mode | default('000') }}
 
 
 #### Misc ####
@@ -163,6 +170,11 @@
     guest ok = {{ share.public | ternary('yes', 'no') }}
 {% else %}
     guest ok = {{ share.guest_ok | default(false) | ternary('yes', 'no') }}
+{% endif %}
+{% if (share.public is defined and share.public) or (share.guest_ok is defined and share.guest_ok) %}
+    smb encrypt = {{ ('off' if samba_usershare_allow_guests) | mandatory('Cannot create share: guest access is disabled globally') }}
+{% else %}
+    smb encrypt = {{ samba_force_encryption | ternary('required', 'desired') }}
 {% endif %}
 {% if share.write_list is defined and share.write_list|length > 0 %}
     write list = {{ share.write_list|join(', ') }}

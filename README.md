@@ -139,6 +139,8 @@ samba_server_min_protocol: "SMB3_11"
 samba_server_max_protocol:
 samba_client_min_protocol: "SMB3_11"
 samba_client_max_protocol:
+samba_client_ipc_min_protocol: "SMB3_11"
+samba_client_ipc_max_protocol:
 samba_force_encryption: true
 samba_host_allow: [ "192.168.0.0/16", "172.16.0.0/12", "10.0.0.0/8" ] # 127.0.0.0/8 always allowed.
 samba_host_deny: [ "0.0.0.0/0" ]
@@ -146,8 +148,10 @@ samba_host_deny: [ "0.0.0.0/0" ]
 # User/Guest Share Permissions
 samba_map_to_guest: "Never"
 samba_guest_account: "nobody"
-samba_usershare_allow_guests: false
+samba_usershare_allow_guests: false  # Read the "Guest Access" section before enabling.
 samba_read_only: true
+samba_create_mask: 0644
+samba_force_create_mode: 000
 
 # Misc
 samba_unix_extensions: true
@@ -322,13 +326,24 @@ used is the "Bad User" one, which means that if you try to login with a username
 that does not exist you will automatically be treated as a guest login which
 does not need a password.
 
-And finally you will have to set the `guest ok` [share](#shares) setting to
-"true" in order to actually allow a guest account to access a share. All the
-necessary settings are collected in the example below:
+Then you will need to change the global `samba_usershare_allow_guests` setting,
+which is just used as a failsafe so this is not accidentally enabled, before
+finally changing the `guest ok` [share](#shares) setting to "true" in order to
+actually allow a guest account to access a share.
+
+> :important: Enabling guest access requires [disabling of encryption][33] for
+> this share since Samba requires a password to be able to set up an encrypted
+> connection. Read more in the [Encrypted Connection](#encrypted-connection)
+> section for a workaround.
+
+All the necessary settings are collected in the example below:
 
 **Example:**
 
 ```yaml
+samba_usershare_allow_guests: true
+samba_force_encryption: false
+
 samba_map_to_guest: "Bad User"
 samba_guest_account: "nobody"
 
@@ -340,8 +355,8 @@ samba_shares:
 
 
 ## Protocol Version
-In the [global](#global-settings) settings I have made so that both the
-`server min protocol` and the `client min protocol` defaults to "SMB3_11", since
+In the [global](#global-settings) settings I have made so that all the
+`server`/`client`/`ipc`-`min protocol` defaults to "SMB3_11", since
 this should only be lowered in case you are serving something else than Linux
 or Windows 10 computers. A list of all supported protocol versions can be found
 in the [`server max protocol`][27] section of the manual, and the options are
@@ -384,6 +399,32 @@ sudo mount -t cifs -o vers=3.11,seal //192.168.0.1/share /home/user/share
 In Samba [4.15][30] there is also a possibility to tune what type of encryption
 is used, but from what I can read it seems like `cifs-utils` only support
 AES-128-CCM at the moment.
+
+However, forcing connections to be encrypted conflicts with the `guest ok`
+option, since Samba apparently is [unable to create an encrypted connection][33]
+for an unauthenticated user (i.e. `guest`) as this account is missing a password
+which mean [no encryption keys can be created][34]. A more secure workaround
+for this is to create the user "guest" with password "guest" and explaining that
+for anyone that want to connect "anonymously" instead of degrading the security
+for all users that want to connect to the same share:
+
+```yaml
+samba_usershare_allow_guests: false
+
+samba_users:
+  - name: "nobody"
+    password: "guest"
+samba_username_map:
+  - to: "nobody"
+    from:
+      - "guest"
+
+samba_shares:
+  - name:
+    path:
+    valid_users:
+      - "nobody"
+```
 
 
 ## Logging
@@ -620,3 +661,5 @@ make sure the output follows the required format.
 [30]: https://www.fatyas.com/wiki/Samba
 [31]: https://lists.samba.org/archive/samba/2017-April/207530.html
 [32]: https://manpages.ubuntu.com/manpages/impish/man8/mount.cifs.8.html#seal
+[33]: https://serverfault.com/a/874499
+[34]: https://techcommunity.microsoft.com/blog/filecab/smb-signing-and-guest-authentication/3846679
