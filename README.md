@@ -519,10 +519,10 @@ samba_shares:
             value: "yes"
           - name: "exclude"
             value: "*.tmp, *~, *.bak, *.zip, *.rar"
-      - name: "crossrename"
+      - name: "crossrename" # Should be defined last to work as intended.
         options:
           - name: "sizelimit"
-            value: "750"
+            value: "750" # MiB
 ```
 
 What this configuration will create is a folder called `.recycle/` in the root
@@ -550,6 +550,10 @@ only a problem if you have a more exotic setup with symlinks for example:
 ```
 
 > NOTE: This kind of setup will also need `wide_links: true`.
+
+> :important: Because of a [bug][35] introduced in Samba ~4.15 `crossrename`
+> does not function properly until Samba 4.21. Using [Debian Backports][36]
+> could be a solution for this.
 
 So this setting can be ignored if you only have one disk, are using RAID, or
 are pooling disks with something like [mergerfs][12]. The `sizelimit` (in
@@ -662,3 +666,5 @@ make sure the output follows the required format.
 [32]: https://manpages.ubuntu.com/manpages/impish/man8/mount.cifs.8.html#seal
 [33]: https://serverfault.com/a/874499
 [34]: https://techcommunity.microsoft.com/blog/filecab/smb-signing-and-guest-authentication/3846679
+[35]: https://issues.redhat.com/browse/RHEL-2223?jql=%22Bugzilla%20Bug%22%20%3D%20%222125339%22
+[36]: https://backports.debian.org/Instructions/

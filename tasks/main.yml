@@ -10,7 +10,7 @@
       - samba-common
       - samba
       - samba-client
-      - samba-vfs-modules
+      - samba-vfs-modules # Part of main samba package for Samba >4.20.
 
 - name: Increase the allowed maximum number of open files (a Windows limitation)
   ansible.builtin.lineinfile:
